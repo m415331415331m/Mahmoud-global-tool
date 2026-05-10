@@ -1,32 +1,23 @@
 name: Build MahmoudTool EXE
 on:
-  workflow_dispatch: # للتشغيل اليدوي
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: windows-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-
       - name: Install Dependencies
         run: |
           pip install -r requirements.txt
           pip install pyinstaller
-
       - name: Build EXE
-        run: |
-          pyinstaller --onefile --noconsole --add-data "ui;ui" --add-data "localization;localization" main.py
-        # ملاحظة: أضفت لك المجلدات الأساسية لكي يعمل البرنامج بشكل صحيح بعد التحويل
-
-      - name: Upload Result
-        uses: actions/upload-artifact@v4
+        run: pyinstaller --onefile --noconsole main.py
+      - uses: actions/upload-artifact@v4
         with:
-          name: MahmoudTool-Final-EXE
+          name: MahmoudTool-EXE
           path: dist/*.exe
           
