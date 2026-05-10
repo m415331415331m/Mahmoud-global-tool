@@ -12,9 +12,10 @@ jobs:
       - name: Extract Project Files
         shell: pwsh
         run: |
-          # هنا نقوم بفك ضغط الملف (تأكد أن الاسم يطابق ملفك)
-          Expand-Archive -Path "MahmoudTool.zip" -DestinationPath "." -Force
-          ls # لعرض الملفات والتأكد من فكها
+          # هذا الأمر سيبحث عن أي ملف مضغوط ويفكه تلقائياً مهما كان اسمه
+          $zipFile = Get-ChildItem -Filter *.zip | Select-Object -First 1
+          Expand-Archive -Path $zipFile.FullName -DestinationPath "." -Force
+          ls # للتأكد من ظهور ملف main.py بعد الفك
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -23,13 +24,12 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          # تثبيت المكتبات من الملف المفكوك
           if (Test-Path requirements.txt) { pip install -r requirements.txt }
           pip install pyinstaller
 
       - name: Build EXE
         run: |
-          # بناء البرنامج (تأكد أن الملف الأساسي اسمه main.py داخل الزيب)
+          # تأكد أن الملف الأساسي داخل الزيب اسمه main.py
           pyinstaller --onefile --noconsole main.py
 
       - name: Upload Result
