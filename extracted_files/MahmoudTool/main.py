@@ -9,92 +9,98 @@ License : Professional License
 Platform: Windows 10/11 x64
 ============================================================
 """
-
 import sys
 import os
 import ctypes
 import logging
 from pathlib import Path
 
-# ── Make sure we run from the project root ──────────────────
+# Ensure running from project root (dynamic, never hardcoded)
 BASE_DIR = Path(__file__).resolve().parent
-sys.path.insert(0, str(BASE_DIR))
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
 
-# ── Enable DPI Awareness on Windows ────────────────────────
+# DPI Awareness Always
 if sys.platform == "win32":
     try:
         ctypes.windll.shcore.SetProcessDpiAwareness(2)
     except Exception:
-        ctypes.windll.user32.SetProcessDPIAware()
+        try:
+            ctypes.windll.user32.SetProcessDPIAware()
+        except Exception:
+            pass
 
-# ── PySide6 Imports ─────────────────────────────────────────
-from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import Qt, QTranslator, QLocale
-from PySide6.QtGui import QIcon, QFont, QFontDatabase
+# Safe PySide6 handling
+try:
+    from PySide6.QtWidgets import QApplication
+    from PySide6.QtCore import Qt, QTranslator, QLocale
+    from PySide6.QtGui import QIcon, QFont, QFontDatabase
+except ImportError as e:
+    sys.stderr.write(f"Missing PySide6: {e}\n")
+    sys.exit(1)
 
-# ── Internal Imports ────────────────────────────────────────
-from core.config import AppConfig
-from core.logger import setup_logger
-from core.database import DatabaseManager
-from ui.main_window import MainWindow
-from ui.splash_screen import SplashScreen
-
+# Internal dynamic imports
+try:
+    from core.config import AppConfig
+    from core.logger import setup_logger
+    from core.database import DatabaseManager
+    from ui.main_window import MainWindow
+    from ui.splash_screen import SplashScreen
+except ImportError as err:
+    sys.stderr.write(f"Import error: {err}\n")
+    sys.exit(1)
 
 def load_fonts() -> None:
-    """Load custom Arabic / Latin fonts from assets."""
+    """Load all custom fonts from assets - robust to missing files."""
     font_dir = BASE_DIR / "assets" / "fonts"
     if font_dir.exists():
-        for font_file in font_dir.glob("*.ttf"):
-            QFontDatabase.addApplicationFont(str(font_file))
-        for font_file in font_dir.glob("*.otf"):
-            QFontDatabase.addApplicationFont(str(font_file))
+        for ext in ("*.ttf", "*.otf"):
+            for font_file in font_dir.glob(ext):
+                try:
+                    QFontDatabase.addApplicationFont(str(font_file))
+                except Exception:
+                    continue
 
-
-def apply_stylesheet(app: QApplication, config: AppConfig) -> None:
-    """Apply the global dark-mode stylesheet."""
+def apply_stylesheet(app: QApplication, config) -> None:
     qss_path = BASE_DIR / "assets" / "styles" / "dark_theme.qss"
     if qss_path.exists():
-        app.setStyleSheet(qss_path.read_text(encoding="utf-8"))
-
+        try:
+            app.setStyleSheet(qss_path.read_text(encoding="utf-8"))
+        except Exception:
+            pass
 
 def main() -> int:
-    # ── High-DPI scaling ─────────────────────────────────────
     QApplication.setHighDpiScaleFactorRoundingPolicy(
         Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
     )
-
     app = QApplication(sys.argv)
     app.setApplicationName("Mahmoud AI Global Tool Ultimate 2026")
     app.setApplicationVersion("2.0.2026")
     app.setOrganizationName("Mahmoud AI")
 
-    # ── Load configuration ───────────────────────────────────
-    config = AppConfig(BASE_DIR / "config.json")
-
-    # ── Setup logger ─────────────────────────────────────────
+    config_path = BASE_DIR / "config.json"
+    config = AppConfig(config_path if config_path.exists() else None)
     setup_logger(BASE_DIR / "logs")
 
-    # ── Initialize database ──────────────────────────────────
-    db = DatabaseManager(BASE_DIR / "data" / "tool.db")
-    db.initialize()
+    db_path = BASE_DIR / "data" / "tool.db"
+    db = DatabaseManager(db_path)
+    try:
+        db.initialize()
+    except Exception as e:
+        print(f"DB init error: {e}")
 
-    # ── Fonts & stylesheet ───────────────────────────────────
     load_fonts()
     apply_stylesheet(app, config)
 
-    # ── Splash screen ────────────────────────────────────────
     splash = SplashScreen()
     splash.show()
     app.processEvents()
 
-    # ── Main window ──────────────────────────────────────────
     window = MainWindow(config=config, db=db, base_dir=BASE_DIR)
-
     splash.finish(window)
     window.show()
 
     return app.exec()
-
 
 if __name__ == "__main__":
     sys.exit(main())
