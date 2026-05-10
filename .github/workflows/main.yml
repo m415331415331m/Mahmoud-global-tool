@@ -1,87 +1,27 @@
-name: Mahmoud Tool - AI Master Builder (Self-Healing)
-
+name: Extract ZIP to Repository
 on:
-  workflow_dispatch: # تشغيل يدوي بضغطة زر
+  workflow_dispatch: # تشغيل يدوي من الهاتف
 
 jobs:
-  fix_and_build:
-    runs-on: windows-latest
-
+  extract:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-    - name: 1. جلب الكود المصدري
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: 2. تهيئة بيئة التحليل
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
+      - name: Extract ZIP
+        run: |
+          unzip MahmoudAITool_2026_COMPLETE.zip -d extracted_files/
+          # حذف الملفات غير الضرورية لتقليل الفوضى
+          rm -rf extracted_files/__MACOSX 
 
-    - name: 3. المحرر الذكي: فحص وإصلاح الملفات (Line-by-Line Fix)
-      shell: pwsh
-      run: |
-        # فك الضغط إذا كان المشروع مرفوع كـ ZIP لتسهيل الفحص
-        Get-ChildItem -Filter *.zip | ForEach-Object { 
-            Expand-Archive -Path $_.FullName -DestinationPath . -Force 
-            Remove-Item $_.FullName # حذف الملف المضغوط لعدم تكرار الأكواد
-        }
-
-        # ميكانيكية "الدراسة والتعلم من الأخطاء":
-        $pyFiles = Get-ChildItem -Recurse -Filter *.py
-        foreach ($file in $pyFiles) {
-            $content = Get-Content $file.FullName
-            $modified = $false
-
-            # الخطأ 1: نقص تعريف QWidget (الذي ظهر في الصور السابقة)
-            if ($content -match "QWidget" -and $content -notmatch "from PySide6.QtWidgets import .*QWidget") {
-                $content = "from PySide6.QtWidgets import QWidget, QLabel, QVBoxLayout, QHBoxLayout, QPushButton, QFrame, QSizePolicy`r`n" + $content
-                $modified = $true
-                Write-Host "⚠️ تم إصلاح نقص QWidget في: $($file.Name)"
-            }
-
-            # الخطأ 2: نقص مكاتب الإشارات QtCore (Signal/Qt)
-            if (($content -match "Signal" -or $content -match "Qt\.") -and $content -notmatch "from PySide6.QtCore") {
-                $content = "from PySide6.QtCore import Qt, Signal, Slot`r`n" + $content
-                $modified = $true
-                Write-Host "⚠️ تم إصلاح نقص QtCore في: $($file.Name)"
-            }
-
-            # الخطأ 3: نقص مكاتب QtGui (QFont/QIcon)
-            if (($content -match "QFont" -or $content -match "QIcon") -and $content -notmatch "from PySide6.QtGui") {
-                $content = "from PySide6.QtGui import QFont, QIcon, QPixmap`r`n" + $content
-                $modified = $true
-            }
-
-            # حفظ التعديلات الجذرية في الملف المصدري قبل التحويل
-            if ($modified) {
-                $content | Set-Content $file.FullName -Force
-            }
-        }
-
-    - name: 4. تثبيت المكاتب وتخفيف الحجم (Optimization)
-      run: |
-        python -m pip install --upgrade pip
-        pip install pyinstaller PySide6 requests
-        # تثبيت أي مكتبات إضافية موجودة في الكود
-        if (Test-Path requirements.txt) { pip install -r requirements.txt }
-
-    - name: 5. التحويل الاحترافي (النسخة المستقرة 100%)
-      shell: pwsh
-      run: |
-        # البحث عن ملف main.py في كل مكان
-        $mainFile = (Get-ChildItem -Recurse -Filter main.py | Select-Object -First 1).FullName
-        if (-not $mainFile) { throw "Error: main.py not found!" }
-        
-        # تحويل لـ EXE واحد، حجم صغير، بدون شاشة سوداء، مع دمج المكاتب
-        pyinstaller --noconsole --onefile --clean `
-        --collect-all PySide6 `
-        --exclude-module QtWebEngineWidgets `
-        --exclude-module unittest `
-        --exclude-module numpy `
-        --name "Mahmoud_Global_Tool_Stable" "$mainFile"
-
-    - name: 6. رفع الملف النهائي
-      uses: actions/upload-artifact@v4
-      with:
-        name: Mahmoud-Tool-Auto-Fixed-Final
-        path: dist/*.exe
-        
+      - name: Commit and Push changes
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add .
+          git commit -m "Auto-extracted project files for AI processing"
+          git push
+          
