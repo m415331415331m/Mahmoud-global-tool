@@ -1,0 +1,31 @@
+name: Build MahmoudTool EXE
+on: [push, workflow_dispatch] # يعمل عند الرفع أو يدوياً
+
+jobs:
+  build:
+    runs-on: windows-latest # يفتح جهاز ويندوز حقيقي في السحاب
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Run Download Script
+        run: python download_tools.py # السكربت الذي سيحمل ADB والتعريفات
+
+      - name: Build EXE
+        run: pyinstaller build.spec
+
+      - name: Upload Result
+        uses: actions/upload-artifact@v4
+        with:
+          name: MahmoudTool-Final-EXE
+          path: dist/*.exe
+          
