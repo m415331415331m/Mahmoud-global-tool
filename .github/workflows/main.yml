@@ -1,4 +1,4 @@
-name: Build MahmoudTool EXE
+name: Build MahmoudTool EXE from ZIP
 on:
   workflow_dispatch:
 
@@ -6,18 +6,35 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Extract Project Files
+        shell: pwsh
+        run: |
+          # هنا نقوم بفك ضغط الملف (تأكد أن الاسم يطابق ملفك)
+          Expand-Archive -Path "MahmoudTool.zip" -DestinationPath "." -Force
+          ls # لعرض الملفات والتأكد من فكها
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
       - name: Install Dependencies
         run: |
-          pip install -r requirements.txt
+          # تثبيت المكتبات من الملف المفكوك
+          if (Test-Path requirements.txt) { pip install -r requirements.txt }
           pip install pyinstaller
+
       - name: Build EXE
-        run: pyinstaller --onefile --noconsole main.py
-      - uses: actions/upload-artifact@v4
+        run: |
+          # بناء البرنامج (تأكد أن الملف الأساسي اسمه main.py داخل الزيب)
+          pyinstaller --onefile --noconsole main.py
+
+      - name: Upload Result
+        uses: actions/upload-artifact@v4
         with:
-          name: MahmoudTool-EXE
+          name: MahmoudTool-Final-EXE
           path: dist/*.exe
           
