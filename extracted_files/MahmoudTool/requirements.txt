@@ -1,0 +1,52 @@
+# ============================================================
+# Mahmoud AI Global Tool Ultimate 2026
+# Requirements File
+# ============================================================
+
+# Core UI Framework
+PySide6>=6.6.0
+PySide6-Fluent-Widgets>=1.5.0
+
+# Database
+# SQLite is built-in to Python
+
+# ADB / Fastboot - via subprocess calls (tools bundled separately)
+
+# Network & HTTP
+requests>=2.31.0
+aiohttp>=3.9.0
+
+# System
+psutil>=5.9.0
+pywin32>=306; sys_platform == "win32"
+wmi>=1.5.1; sys_platform == "win32"
+
+# USB / Device Detection
+pyusb>=1.2.1
+
+# Async
+asyncio-throttle>=1.0.2
+
+# Serial Port (for Qualcomm/MTK)
+pyserial>=3.5
+
+# Logging
+loguru>=0.7.2
+
+# Packaging & Build
+PyInstaller>=6.3.0
+
+# Image Processing
+Pillow>=10.0.0
+
+# QR Code (for Wireless ADB)
+qrcode>=7.4.2
+
+# Encryption (for profiles)
+cryptography>=41.0.0
+
+# Config
+python-dotenv>=1.0.0
+
+# Progress
+tqdm>=4.66.0
