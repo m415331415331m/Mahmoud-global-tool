@@ -9,13 +9,24 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Extract Project Files
+      - name: Extract and Organize Files
         shell: pwsh
         run: |
-          # هذا الأمر سيبحث عن أي ملف مضغوط ويفكه تلقائياً مهما كان اسمه
+          # 1. البحث عن ملف الزيب وفكه
           $zipFile = Get-ChildItem -Filter *.zip | Select-Object -First 1
-          Expand-Archive -Path $zipFile.FullName -DestinationPath "." -Force
-          ls # للتأكد من ظهور ملف main.py بعد الفك
+          Expand-Archive -Path $zipFile.FullName -DestinationPath "./temp_extracted" -Force
+          
+          # 2. البحث عن مكان ملف main.py الحقيقي ونقل كل الملفات بجانبه إلى المجلد الرئيسي
+          $mainFile = Get-ChildItem -Path "./temp_extracted" -Filter "main.py" -Recurse | Select-Object -First 1
+          if ($mainFile) {
+              $projectRoot = $mainFile.Directory.FullName
+              Copy-Item -Path "$projectRoot\*" -Destination "." -Recurse -Force
+              Write-Host "Found main.py in: $projectRoot"
+          } else {
+              Write-Error "Could not find main.py inside the ZIP file!"
+              exit 1
+          }
+          ls # عرض الملفات للتأكد
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -29,8 +40,12 @@ jobs:
 
       - name: Build EXE
         run: |
-          # تأكد أن الملف الأساسي داخل الزيب اسمه main.py
-          pyinstaller --onefile --noconsole main.py
+          # بناء البرنامج مع تضمين المجلدات الضرورية إذا وجدت
+          $add_data = ""
+          if (Test-Path "ui") { $add_data += "--add-data 'ui;ui' " }
+          if (Test-Path "localization") { $add_data += "--add-data 'localization;localization' " }
+          
+          Invoke-Expression "pyinstaller --onefile --noconsole $add_data main.py"
 
       - name: Upload Result
         uses: actions/upload-artifact@v4
