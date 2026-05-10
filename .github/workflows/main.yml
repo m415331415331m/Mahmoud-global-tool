@@ -1,53 +1,87 @@
-name: Mahmoud Tool - Optimized Professional Build
+name: Mahmoud Tool - AI Master Builder (Self-Healing)
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: # تشغيل يدوي بضغطة زر
 
 jobs:
-  build:
+  fix_and_build:
     runs-on: windows-latest
 
     steps:
-    - name: 1. Checkout Code
+    - name: 1. جلب الكود المصدري
       uses: actions/checkout@v4
 
-    - name: 2. Setup Python
+    - name: 2. تهيئة بيئة التحليل
       uses: actions/setup-python@v5
       with:
         python-version: '3.10'
 
-    - name: 3. Install Requirements (Clean)
-      run: |
-        python -m pip install --upgrade pip
-        # تثبيت المكاتب المطلوبة فقط لتقليل الحجم
-        pip install pyinstaller PySide6 requests
-        if (Test-Path requirements.txt) { pip install -r requirements.txt }
-
-    - name: 4. Technical Fix & Extraction
+    - name: 3. المحرر الذكي: فحص وإصلاح الملفات (Line-by-Line Fix)
       shell: pwsh
       run: |
-        # فك الضغط وتحديد الملف الرئيسي
-        Get-ChildItem -Filter *.zip | ForEach-Object { Expand-Archive -Path $_.FullName -DestinationPath . -Force }
-        $mainFile = Get-ChildItem -Recurse -Filter main.py | Select-Object -First 1
-        echo "MAIN_PATH=$($mainFile.FullName)" >> $env:GITHUB_ENV
+        # فك الضغط إذا كان المشروع مرفوع كـ ZIP لتسهيل الفحص
+        Get-ChildItem -Filter *.zip | ForEach-Object { 
+            Expand-Archive -Path $_.FullName -DestinationPath . -Force 
+            Remove-Item $_.FullName # حذف الملف المضغوط لعدم تكرار الأكواد
+        }
 
-    - name: 5. Professional Build (Optimized Size)
+        # ميكانيكية "الدراسة والتعلم من الأخطاء":
+        $pyFiles = Get-ChildItem -Recurse -Filter *.py
+        foreach ($file in $pyFiles) {
+            $content = Get-Content $file.FullName
+            $modified = $false
+
+            # الخطأ 1: نقص تعريف QWidget (الذي ظهر في الصور السابقة)
+            if ($content -match "QWidget" -and $content -notmatch "from PySide6.QtWidgets import .*QWidget") {
+                $content = "from PySide6.QtWidgets import QWidget, QLabel, QVBoxLayout, QHBoxLayout, QPushButton, QFrame, QSizePolicy`r`n" + $content
+                $modified = $true
+                Write-Host "⚠️ تم إصلاح نقص QWidget في: $($file.Name)"
+            }
+
+            # الخطأ 2: نقص مكاتب الإشارات QtCore (Signal/Qt)
+            if (($content -match "Signal" -or $content -match "Qt\.") -and $content -notmatch "from PySide6.QtCore") {
+                $content = "from PySide6.QtCore import Qt, Signal, Slot`r`n" + $content
+                $modified = $true
+                Write-Host "⚠️ تم إصلاح نقص QtCore في: $($file.Name)"
+            }
+
+            # الخطأ 3: نقص مكاتب QtGui (QFont/QIcon)
+            if (($content -match "QFont" -or $content -match "QIcon") -and $content -notmatch "from PySide6.QtGui") {
+                $content = "from PySide6.QtGui import QFont, QIcon, QPixmap`r`n" + $content
+                $modified = $true
+            }
+
+            # حفظ التعديلات الجذرية في الملف المصدري قبل التحويل
+            if ($modified) {
+                $content | Set-Content $file.FullName -Force
+            }
+        }
+
+    - name: 4. تثبيت المكاتب وتخفيف الحجم (Optimization)
       run: |
-        # --exclude-module: استبعاد المكاتب الثقيلة التي لا يحتاجها برنامجك لتقليل الحجم
-        # --collect-submodules: سحب الأجزاء المهمة فقط من PySide6
+        python -m pip install --upgrade pip
+        pip install pyinstaller PySide6 requests
+        # تثبيت أي مكتبات إضافية موجودة في الكود
+        if (Test-Path requirements.txt) { pip install -r requirements.txt }
+
+    - name: 5. التحويل الاحترافي (النسخة المستقرة 100%)
+      shell: pwsh
+      run: |
+        # البحث عن ملف main.py في كل مكان
+        $mainFile = (Get-ChildItem -Recurse -Filter main.py | Select-Object -First 1).FullName
+        if (-not $mainFile) { throw "Error: main.py not found!" }
+        
+        # تحويل لـ EXE واحد، حجم صغير، بدون شاشة سوداء، مع دمج المكاتب
         pyinstaller --noconsole --onefile --clean `
+        --collect-all PySide6 `
+        --exclude-module QtWebEngineWidgets `
         --exclude-module unittest `
         --exclude-module numpy `
-        --exclude-module matplotlib `
-        --exclude-module QtWebEngineWidgets `
-        --hidden-import PySide6.QtWidgets `
-        --hidden-import PySide6.QtCore `
-        --hidden-import PySide6.QtGui `
-        --name "Mahmoud_Global_Tool_Pro" "${{ env.MAIN_PATH }}"
+        --name "Mahmoud_Global_Tool_Stable" "$mainFile"
 
-    - name: 6. Upload Optimized EXE
+    - name: 6. رفع الملف النهائي
       uses: actions/upload-artifact@v4
       with:
-        name: Mahmoud-Tool-Pro-Release
+        name: Mahmoud-Tool-Auto-Fixed-Final
         path: dist/*.exe
         
