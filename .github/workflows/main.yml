@@ -1,55 +1,54 @@
-name: Build MahmoudTool EXE from ZIP
+name: Mahmoud Global Tool Builder - Ultra
+
 on:
-  workflow_dispatch:
+  workflow_dispatch: # للتشغيل اليدوي
 
 jobs:
   build:
     runs-on: windows-latest
+
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+    - name: Checkout Code
+      uses: actions/checkout@v4
 
-      - name: Extract and Organize Files
-        shell: pwsh
-        run: |
-          # 1. البحث عن ملف الزيب وفكه
-          $zipFile = Get-ChildItem -Filter *.zip | Select-Object -First 1
-          Expand-Archive -Path $zipFile.FullName -DestinationPath "./temp_extracted" -Force
-          
-          # 2. البحث عن مكان ملف main.py الحقيقي ونقل كل الملفات بجانبه إلى المجلد الرئيسي
-          $mainFile = Get-ChildItem -Path "./temp_extracted" -Filter "main.py" -Recurse | Select-Object -First 1
-          if ($mainFile) {
-              $projectRoot = $mainFile.Directory.FullName
-              Copy-Item -Path "$projectRoot\*" -Destination "." -Recurse -Force
-              Write-Host "Found main.py in: $projectRoot"
-          } else {
-              Write-Error "Could not find main.py inside the ZIP file!"
-              exit 1
-          }
-          ls # عرض الملفات للتأكد
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
+    - name: Install Core Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller PyQt6
+        # هنا نقوم بتثبيت أي مكتبات إضافية يستخدمها مشروعك
+        # إذا كان لديك ملف requirements.txt سيعمل السطر التالي:
+        if (Test-Path requirements.txt) { pip install -r requirements.txt }
 
-      - name: Install Dependencies
-        run: |
-          if (Test-Path requirements.txt) { pip install -r requirements.txt }
-          pip install pyinstaller
+    - name: Fix Missing Imports & Verify Code
+      shell: pwsh
+      run: |
+        # هذا السطر يحل مشكلة QWidget التي ظهرت لك في الصورة بشكل آلي
+        $file = "ui/widgets/device_card.py"
+        if (Test-Path $file) {
+            $content = Get-Content $file
+            if (-not ($content -match "from PyQt6.QtWidgets import .*QWidget")) {
+                $newImport = "from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout, QHBoxLayout"
+                $newImport + "`n" + $content | Set-Content $file
+                Write-Host "Fixed QWidget import in $file"
+            }
+        }
 
-      - name: Build EXE
-        run: |
-          # بناء البرنامج مع تضمين المجلدات الضرورية إذا وجدت
-          $add_data = ""
-          if (Test-Path "ui") { $add_data += "--add-data 'ui;ui' " }
-          if (Test-Path "localization") { $add_data += "--add-data 'localization;localization' " }
-          
-          Invoke-Expression "pyinstaller --onefile --noconsole $add_data main.py"
+    - name: Build EXE (The Final Tool)
+      run: |
+        # تحويل البرنامج مع تضمين كل الملفات والواجهات
+        # --noconsole: لإخفاء الشاشة السوداء عند تشغيل البرنامج
+        # --onefile: لجمع كل شيء في ملف EXE واحد
+        # --collect-all: تضمن سحب كل ملفات PyQt6 بشكل كامل
+        pyinstaller --noconsole --onefile --collect-all PyQt6 --name "MahmoudTool-Global-v1" main.py
 
-      - name: Upload Result
-        uses: actions/upload-artifact@v4
-        with:
-          name: MahmoudTool-Final-EXE
-          path: dist/*.exe
-          
+    - name: Upload Finished Program
+      uses: actions/upload-artifact@v4
+      with:
+        name: MahmoudTool-Final-Stable
+        path: dist/MahmoudTool-Global-v1.exe
+        
