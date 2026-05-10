@@ -1,54 +1,77 @@
-name: Mahmoud Global Tool Builder - Ultra
+name: Mahmoud Tool Ultimate - Zero Error Logic
 
 on:
-  workflow_dispatch: # للتشغيل اليدوي
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: windows-latest
 
     steps:
-    - name: Checkout Code
+    - name: 1. سحب الكود المصدري
       uses: actions/checkout@v4
 
-    - name: Set up Python
+    - name: 2. تهيئة بيئة بايثون (3.10)
       uses: actions/setup-python@v5
       with:
         python-version: '3.10'
 
-    - name: Install Core Dependencies
+    - name: 3. تثبيت المكتبات الأساسية والذكية
       run: |
         python -m pip install --upgrade pip
-        pip install pyinstaller PyQt6
-        # هنا نقوم بتثبيت أي مكتبات إضافية يستخدمها مشروعك
-        # إذا كان لديك ملف requirements.txt سيعمل السطر التالي:
-        if (Test-Path requirements.txt) { pip install -r requirements.txt }
+        pip install pyinstaller PyQt6 requests
+        # البحث عن أي ملف requirements وتثبيته فوراً
+        Get-ChildItem -Recurse -Filter requirements.txt | ForEach-Object { pip install -r $_.FullName }
 
-    - name: Fix Missing Imports & Verify Code
+    - name: 4. فحص الملفات وإصلاح الأخطاء البرمجية آلياً
       shell: pwsh
       run: |
-        # هذا السطر يحل مشكلة QWidget التي ظهرت لك في الصورة بشكل آلي
-        $file = "ui/widgets/device_card.py"
-        if (Test-Path $file) {
-            $content = Get-Content $file
-            if (-not ($content -match "from PyQt6.QtWidgets import .*QWidget")) {
-                $newImport = "from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout, QHBoxLayout"
-                $newImport + "`n" + $content | Set-Content $file
-                Write-Host "Fixed QWidget import in $file"
+        # فك ضغط أي ملفات ZIP موجودة لتجهيز الكود
+        Get-ChildItem -Filter *.zip | ForEach-Object { Expand-Archive -Path $_.FullName -DestinationPath . -Force }
+
+        # ميكانيكية الإصلاح الذاتي: البحث عن نقص استيراد QWidget في كل ملفات المشروع
+        $pyFiles = Get-ChildItem -Recurse -Filter *.py
+        foreach ($file in $pyFiles) {
+            $content = Get-Content $file.FullName
+            # إذا كان الملف يستخدم QWidget ولكنه لا يستوردها، نقوم بإضافتها
+            if ($content -match "QWidget" -and $content -notmatch "from PyQt6.QtWidgets import .*QWidget") {
+                $importLine = "from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout, QHBoxLayout, QPushButton"
+                $importLine + "`r`n" + $content | Set-Content $file.FullName
+                Write-Host "✅ تم إصلاح نقص المكتبات في ملف: $($file.Name)"
             }
         }
 
-    - name: Build EXE (The Final Tool)
+    - name: 5. التحقق من وجود ملف التشغيل الرئيسي (Main Logic)
+      id: locate_main
+      shell: pwsh
       run: |
-        # تحويل البرنامج مع تضمين كل الملفات والواجهات
-        # --noconsole: لإخفاء الشاشة السوداء عند تشغيل البرنامج
-        # --onefile: لجمع كل شيء في ملف EXE واحد
-        # --collect-all: تضمن سحب كل ملفات PyQt6 بشكل كامل
-        pyinstaller --noconsole --onefile --collect-all PyQt6 --name "MahmoudTool-Global-v1" main.py
+        $mainFile = Get-ChildItem -Recurse -Filter main.py | Select-Object -First 1
+        if (-not $mainFile) {
+            Write-Error "❌ خطأ فادح: لم يتم العثور على ملف main.py في أي مكان!"
+            exit 1
+        }
+        echo "MAIN_PATH=$($mainFile.FullName)" >> $env:GITHUB_ENV
+        Write-Host "🚀 تم تحديد الملف الرئيسي في: $($mainFile.FullName)"
 
-    - name: Upload Finished Program
+    - name: 6. تحويل احترافي (EXE) مع دراسة بيئة التشغيل
+      run: |
+        # --collect-all PyQt6: يضمن أن كل ملفات DLL والصور الخاصة بالواجهة ستكون داخل الـ EXE
+        # --clean: تنظيف الملفات المؤقتة لضمان نسخة نقية 100%
+        pyinstaller --noconsole --onefile --clean --collect-all PyQt6 --name "Mahmoud_Global_Tool_Stable" "${{ env.MAIN_PATH }}"
+
+    - name: 7. فحص الملف الناتج (Verification)
+      shell: pwsh
+      run: |
+        if (Test-Path "dist/Mahmoud_Global_Tool_Stable.exe") {
+            Write-Host "🏆 تم بناء الملف بنجاح وهو جاهز للتشغيل الآن."
+        } else {
+            Write-Error "⚠️ فشلت عملية التحويل في المرحلة النهائية."
+            exit 1
+        }
+
+    - name: 8. رفع الملف النهائي للتحميل
       uses: actions/upload-artifact@v4
       with:
-        name: MahmoudTool-Final-Stable
-        path: dist/MahmoudTool-Global-v1.exe
+        name: Mahmoud-Tool-Official-Release
+        path: dist/*.exe
         
