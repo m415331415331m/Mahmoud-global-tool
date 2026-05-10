@@ -1,12 +1,14 @@
 name: Build MahmoudTool EXE
-on: [push, workflow_dispatch] # يعمل عند الرفع أو يدوياً
+on:
+  workflow_dispatch: # للتشغيل اليدوي
 
 jobs:
   build:
-    runs-on: windows-latest # يفتح جهاز ويندوز حقيقي في السحاب
+    runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -17,11 +19,10 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller
 
-      - name: Run Download Script
-        run: python download_tools.py # السكربت الذي سيحمل ADB والتعريفات
-
       - name: Build EXE
-        run: pyinstaller build.spec
+        run: |
+          pyinstaller --onefile --noconsole --add-data "ui;ui" --add-data "localization;localization" main.py
+        # ملاحظة: أضفت لك المجلدات الأساسية لكي يعمل البرنامج بشكل صحيح بعد التحويل
 
       - name: Upload Result
         uses: actions/upload-artifact@v4
