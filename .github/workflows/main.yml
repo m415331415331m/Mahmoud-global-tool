@@ -1,4 +1,4 @@
-name: Mahmoud Tool - Offline Stable Build
+name: Mahmoud Tool - Optimized Professional Build
 
 on:
   workflow_dispatch:
@@ -16,42 +16,38 @@ jobs:
       with:
         python-version: '3.10'
 
-    - name: 3. Install PySide6 (The Correct Module)
+    - name: 3. Install Requirements (Clean)
       run: |
         python -m pip install --upgrade pip
+        # تثبيت المكاتب المطلوبة فقط لتقليل الحجم
         pip install pyinstaller PySide6 requests
-        # تثبيت أي مكتبات إضافية مذكورة في المشروع
-        Get-ChildItem -Recurse -Filter requirements.txt | ForEach-Object { pip install -r $_.FullName }
+        if (Test-Path requirements.txt) { pip install -r requirements.txt }
 
-    - name: 4. Auto-Fix & Preparation
+    - name: 4. Technical Fix & Extraction
       shell: pwsh
       run: |
-        # فك ضغط الملفات إذا كانت مضغوطة
+        # فك الضغط وتحديد الملف الرئيسي
         Get-ChildItem -Filter *.zip | ForEach-Object { Expand-Archive -Path $_.FullName -DestinationPath . -Force }
-        
-        # التأكد من وجود ملف main.py وتحديد مساره
         $mainFile = Get-ChildItem -Recurse -Filter main.py | Select-Object -First 1
-        if (-not $mainFile) { Write-Error "Main script not found!"; exit 1 }
         echo "MAIN_PATH=$($mainFile.FullName)" >> $env:GITHUB_ENV
 
-    - name: 5. Hard-Link Build (No Missing Files)
+    - name: 5. Professional Build (Optimized Size)
       run: |
-        # --collect-all PySide6: هذا هو "المفتاح" الذي يضمن دمج المكتبة كاملة داخل الـ EXE
-        # --hidden-import: نؤكد على النظام استدعاء المكتبة يدوياً لضمان عدم نسيانها
-        pyinstaller --noconsole --onefile --clean --collect-all PySide6 --hidden-import PySide6.QtWidgets --hidden-import PySide6.QtCore --hidden-import PySide6.QtGui --name "Mahmoud_Global_Tool_Final" "${{ env.MAIN_PATH }}"
+        # --exclude-module: استبعاد المكاتب الثقيلة التي لا يحتاجها برنامجك لتقليل الحجم
+        # --collect-submodules: سحب الأجزاء المهمة فقط من PySide6
+        pyinstaller --noconsole --onefile --clean `
+        --exclude-module unittest `
+        --exclude-module numpy `
+        --exclude-module matplotlib `
+        --exclude-module QtWebEngineWidgets `
+        --hidden-import PySide6.QtWidgets `
+        --hidden-import PySide6.QtCore `
+        --hidden-import PySide6.QtGui `
+        --name "Mahmoud_Global_Tool_Pro" "${{ env.MAIN_PATH }}"
 
-    - name: 6. Final Check
-      shell: pwsh
-      run: |
-        if (Test-Path "dist/Mahmoud_Global_Tool_Final.exe") {
-            Write-Host "Success: File is ready for offline use."
-        } else {
-            exit 1
-        }
-
-    - name: 7. Upload Official Release
+    - name: 6. Upload Optimized EXE
       uses: actions/upload-artifact@v4
       with:
-        name: Mahmoud-Tool-Final-Release
+        name: Mahmoud-Tool-Pro-Release
         path: dist/*.exe
         
