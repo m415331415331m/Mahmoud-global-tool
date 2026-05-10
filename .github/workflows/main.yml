@@ -1,7 +1,9 @@
-name: Temporary Build Test (Validation)
+name: Final Corrected Build 2026
 
 on:
-  workflow_dispatch: # للتشغيل اليدوي من الهاتف
+  push:
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   validate-and-build:
@@ -16,27 +18,27 @@ jobs:
       with:
         python_version: '3.11'
 
-    - name: Install Verified Dependencies
+    - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
         pip install pyinstaller pillow PySide6
-        # محاولة تثبيت المكتبات من الملف الذي أنشأه Copilot
         if (Test-Path extracted_files/requirements.txt) { 
             pip install -r extracted_files/requirements.txt 
         }
 
-    - name: Quick Build Test
+    - name: Build Global Tool EXE
       shell: pwsh
       run: |
-        # التأكد من المسار الصحيح للملف الذي عدله Copilot
+        # الدخول للمجلد الصحيح الذي يحتوي على الملفات المستخرجة
         cd extracted_files/MahmoudTool
         
-        # أمر بناء سريع للتحقق من الصلاحية
-        pyinstaller --onefile --noconsole --clean --uac-admin --name "Mahmoud_Test_Build" main.py
+        # بناء الملف بأعلى جودة واحترافية
+        pyinstaller --onefile --noconsole --clean --uac-admin --name "Mahmoud_Global_Tool_Final" main.py
 
-    - name: Upload Test Result
-      uses: actions/upload-artifact@v3
+    - name: Upload Production Ready EXE
+      uses: actions/upload-artifact@v4 # تم التحديث إلى v4 لحل مشكلة الصورة الأخيرة
       with:
-        name: Temp-Validation-Build
+        name: Mahmoud-Ultimate-Tool-2026
         path: extracted_files/MahmoudTool/dist/*.exe
+        compression-level: 9 # لأفضل حجم وجودة ملف
         
